@@ -6,7 +6,11 @@
 <title>Helion · Eliminare l'account</title>
 <link rel="stylesheet" href="stile.css">
 <script src="https://accounts.google.com/gsi/client" async></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- Versione fissa con il controllo d'integrità: se il CDN cambiasse il file, il browser non lo esegue.
+     Per aggiornarla: hash sha384 del nuovo file, confrontato con quello pubblicato da jsDelivr. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
 </head>
 <body>
 <main>
