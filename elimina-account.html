@@ -18,14 +18,20 @@
 <h1>Eliminare l'account</h1>
 
 <h2>Da qui, subito</h2>
-<p>Entra con lo stesso account Google che usi nel gioco: l'account Helion viene eliminato appena confermi, senza aspettare.</p>
+<p>Entra con lo stesso account Google che usi nel gioco: l'account Helion viene eliminato appena confermi, senza aspettare. Prima di eliminarlo ti chiediamo conferma due volte.</p>
 <div id="google"></div>
 <div id="conferma" hidden>
-  <p>Account: <strong id="email"></strong></p>
+  <p>Account: <strong id="email"></strong><br>Unità: <strong id="unita"></strong></p>
   <label for="scritta">Scrivi ELIMINA per confermare:</label>
   <input id="scritta" autocomplete="off">
   <button id="elimina" class="danger" disabled>Elimina l'account</button>
 </div>
+<dialog id="sicuro" aria-labelledby="sicuro-titolo">
+  <h2 id="sicuro-titolo">Eliminare per sempre l'account?</h2>
+  <p>Stai per eliminare <strong id="sicuro-email"></strong>, con unità, PU, grado, medaglie e messaggi. Non si può annullare e nessuno può recuperarlo.</p>
+  <button id="annulla" type="button">Annulla</button>
+  <button id="elimina-davvero" type="button" class="danger">Sì, elimina per sempre</button>
+</dialog>
 <p id="esito" role="status"></p>
 
 <h2>Dall'app</h2>
@@ -79,14 +85,23 @@ async function onGoogle(response) {
     esito.textContent = "Accesso non riuscito: riprova, oppure scrivi all'indirizzo qui sotto.";
     return;
   }
-  // Un account appena creato vuol dire che con questo Google non si era mai entrati: lo si toglie subito
-  const created = Date.now() - new Date(data.user.created_at).getTime() < 60000;
-  if (created) {
-    await client.rpc("delete_my_account");
+  // Con un Google mai usato nel gioco l'accesso crea un account vuoto: lo decide e lo toglie il server, che non guarda
+  // l'orologio del telefono. Un account vero passa sempre dalle due conferme.
+  const empty = await client.rpc("delete_my_empty_account");
+  if (empty.error) {
+    esito.textContent = "Controllo non riuscito e niente è stato eliminato: riprova, oppure scrivi all'indirizzo qui sotto.";
+    return;
+  }
+  if (empty.data === true) {
     esito.textContent = "Con questo account Google non c'è nessun account Helion: non c'è niente da eliminare.";
     return;
   }
-  document.getElementById("email").textContent = data.user.email ?? "account Google";
+  // La matricola aiuta a capire se è l'account giusto; se non si legge si va avanti senza
+  const { data: units } = await client.from("game_units").select("matricola").eq("status", "active");
+  const email = data.user.email ?? "account Google";
+  document.getElementById("email").textContent = email;
+  document.getElementById("sicuro-email").textContent = email;
+  document.getElementById("unita").textContent = units?.[0]?.matricola ?? "nessuna in gioco";
   document.getElementById("google").hidden = true;
   document.getElementById("conferma").hidden = false;
   esito.textContent = "";
@@ -96,7 +111,13 @@ document.getElementById("scritta").addEventListener("input", (e) => {
   document.getElementById("elimina").disabled = e.target.value.trim().toUpperCase() !== "ELIMINA";
 });
 
-document.getElementById("elimina").addEventListener("click", async () => {
+// Seconda conferma, in una finestra a parte
+const sicuro = document.getElementById("sicuro");
+document.getElementById("elimina").addEventListener("click", () => sicuro.showModal());
+document.getElementById("annulla").addEventListener("click", () => sicuro.close());
+
+document.getElementById("elimina-davvero").addEventListener("click", async () => {
+  sicuro.close();
   document.getElementById("elimina").disabled = true;
   esito.textContent = "Elimino l'account…";
   const { error } = await client.rpc("delete_my_account");
